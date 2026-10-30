@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Витрина-горка открытая — 3D Каталог & QR Маркировка</title>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0b1120; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
+    header { background: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { width: 40px; height: 40px; background: linear-gradient(135deg, #0284c7, #38bdf8); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; }
+    .brand-title h1 { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; }
+    .brand-title p { font-size: 0.78rem; color: #94a3b8; }
+    .badge { background: #0284c7; color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .layout { flex: 1; display: grid; grid-template-columns: 1fr 450px; min-height: calc(100vh - 130px); }
+    @media (max-width: 1024px) { .layout { grid-template-columns: 1fr; } }
+    .viewer-area { display: flex; flex-direction: column; position: relative; background: radial-gradient(circle at center, #1e293b 0%, #0b1120 100%); border-right: 1px solid #1e293b; }
+    .viewer-header { padding: 12px 20px; background: rgba(15, 23, 42, 0.7); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; }
+    .current-title { font-size: 1rem; font-weight: 600; color: #38bdf8; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dedicated-btn { background: #0284c7; color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; text-decoration: none; font-weight: 500; }
+    .viewer-box { position: relative; flex: 1; min-height: 480px; }
+    model-viewer { width: 100%; height: 100%; min-height: 480px; --poster-color: transparent; }
+    .hint { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.85); padding: 6px 16px; border-radius: 20px; font-size: 0.75rem; color: #94a3b8; pointer-events: none; }
+    .sidebar { background: #0f172a; display: flex; flex-direction: column; overflow-y: auto; max-height: calc(100vh - 130px); }
+    .sidebar-block { padding: 16px 20px; border-bottom: 1px solid #1e293b; }
+    .sidebar-block h3 { font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.7px; color: #94a3b8; margin-bottom: 12px; }
+    .search-input { width: 100%; background: #1e293b; border: 1px solid #334155; color: #f8fafc; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 10px; outline: none; }
+    .filter-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .filter-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 4px 10px; border-radius: 14px; font-size: 0.72rem; cursor: pointer; }
+    .filter-btn.active { background: #0284c7; color: white; border-color: #0284c7; }
+    .items-container { display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; }
+    .part-item { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+    .part-item:hover { border-color: #38bdf8; }
+    .part-item.active { border-color: #38bdf8; background: #132a48; }
+    .part-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .part-item-header h4 { font-size: 0.85rem; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 270px; }
+    .cat-pill { font-size: 0.65rem; background: #334155; color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    .part-item-body { display: flex; justify-content: space-between; align-items: center; }
+    .file-name { font-size: 0.72rem; color: #94a3b8; }
+    .open-link { font-size: 0.75rem; color: #38bdf8; text-decoration: none; font-weight: 500; }
+    .spec-card { background: #1e293b; border-radius: 8px; padding: 14px; border: 1px solid #334155; }
+    .spec-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; margin-bottom: 12px; }
+    .spec-table td { padding: 5px 0; border-bottom: 1px solid #334155; }
+    .spec-table td:first-child { color: #94a3b8; }
+    .spec-table td:last-child { text-align: right; font-weight: 600; color: #f8fafc; }
+    .qr-box { display: flex; align-items: center; gap: 12px; background: #0b1120; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
+    .qr-box img { width: 68px; height: 68px; background: white; padding: 3px; border-radius: 6px; }
+    .qr-box-content { flex: 1; }
+    .qr-box-content h5 { font-size: 0.78rem; color: #f1f5f9; margin-bottom: 4px; }
+    .qr-box-content a { font-size: 0.72rem; color: #38bdf8; text-decoration: none; }
+    footer { padding: 12px 24px; background: #09101d; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #64748b; }
+    footer a { color: #38bdf8; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-logo">3D</div>
+      <div class="brand-title">
+        <h1>Витрина-горка открытая</h1>
+        <p>3D-каталог деталей (GLB) & система производственной QR-маркировки</p>
+      </div>
+    </div>
+    <span class="badge">Всего моделей: 64</span>
+  </header>
+  <div class="layout">
+    <section class="viewer-area">
+      <div class="viewer-header">
+        <span class="current-title" id="activeTitle">Главная сборка</span>
+        <a id="dedicatedLink" href="#" class="dedicated-btn">Открыть отдельную страницу &rarr;</a>
+      </div>
+      <div class="viewer-box">
+        <div class="hint">Вращайте модель мышью или пальцем &bull; Колесико — зум</div>
+        <model-viewer id="mainViewer" src="" alt="3D Модель" auto-rotate camera-controls touch-action="pan-y" shadow-intensity="1.3" exposure="1" ar></model-viewer>
+      </div>
+    </section>
+    <aside class="sidebar">
+      <div class="sidebar-block">
+        <h3>Каталог деталей (64)</h3>
+        <input type="text" id="searchInput" class="search-input" placeholder="Поиск по названию или металлу..." oninput="handleSearch()">
+        <div class="filter-pills"><button class="filter-btn active" onclick="filterCategory('all')">Все модели (64)</button><button class="filter-btn" onclick="filterCategory('Главная сборка')">Главная сборка (1)</button><button class="filter-btn" onclick="filterCategory('Остекление (Акрил)')">Остекление (Акрил) (2)</button><button class="filter-btn" onclick="filterCategory('Узел VGO-001 (Воздуховоды)')">Узел VGO-001 (Воздуховоды) (6)</button><button class="filter-btn" onclick="filterCategory('Узел VGO-002 (Каркас и стенки)')">Узел VGO-002 (Каркас и стенки) (28)</button><button class="filter-btn" onclick="filterCategory('Узел VGO-003 (Полки и направляющие)')">Узел VGO-003 (Полки и направляющие) (23)</button><button class="filter-btn" onclick="filterCategory('Узел VGO-004 (Кронштейны и опоры)')">Узел VGO-004 (Кронштейны и опоры) (4)</button></div>
+        <div class="items-container" id="partsList">
+        <div class="part-item" data-category="Узел VGO-001 (Воздуховоды)" data-id="VGO.001.001_AISI_430_0_6мм" onclick="selectPart('VGO.001.001_AISI_430_0_6мм')" id="card-VGO.001.001_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.001.001_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-001 (Воздуховоды)</span>
+            <a href="VGO.001.001_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-001 (Воздуховоды)" data-id="VGO.001.002_AISI_430_0_6мм" onclick="selectPart('VGO.001.002_AISI_430_0_6мм')" id="card-VGO.001.002_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.001.002_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-001 (Воздуховоды)</span>
+            <a href="VGO.001.002_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-001 (Воздуховоды)" data-id="VGO.001.003_AISI_430_0_6мм" onclick="selectPart('VGO.001.003_AISI_430_0_6мм')" id="card-VGO.001.003_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.001.003_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-001 (Воздуховоды)</span>
+            <a href="VGO.001.003_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-001 (Воздуховоды)" data-id="VGO.001.004_AISI_430_0_6мм" onclick="selectPart('VGO.001.004_AISI_430_0_6мм')" id="card-VGO.001.004_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.001.004_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-001 (Воздуховоды)</span>
+            <a href="VGO.001.004_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-001 (Воздуховоды)" data-id="VGO.001.005_AISI_430_0_6мм" onclick="selectPart('VGO.001.005_AISI_430_0_6мм')" id="card-VGO.001.005_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.001.005_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-001 (Воздуховоды)</span>
+            <a href="VGO.001.005_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-001 (Воздуховоды)" data-id="VGO.001.006_AISI_430_0_6мм" onclick="selectPart('VGO.001.006_AISI_430_0_6мм')" id="card-VGO.001.006_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.001.006_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-001 (Воздуховоды)</span>
+            <a href="VGO.001.006_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.001_AISI_430_0_8мм" onclick="selectPart('VGO.002.001_AISI_430_0_8мм')" id="card-VGO.002.001_AISI_430_0_8мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.001_AISI 430_0,8мм</h4>
+            <span class="cat-pill">0,8мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.001_AISI_430_0_8%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.001_MIR1_AISI_430_0_8мм" onclick="selectPart('VGO.002.001_MIR1_AISI_430_0_8мм')" id="card-VGO.002.001_MIR1_AISI_430_0_8мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.001_MIR1_AISI 430_0,8мм</h4>
+            <span class="cat-pill">0,8мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.001_MIR1_AISI_430_0_8%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.002_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.002_Чёрная_сталь_0_9мм')" id="card-VGO.002.002_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.002_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.002_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.003_AISI_430_0_6мм" onclick="selectPart('VGO.002.003_AISI_430_0_6мм')" id="card-VGO.002.003_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.003_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.003_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.004_AISI_304_2мм" onclick="selectPart('VGO.002.004_AISI_304_2мм')" id="card-VGO.002.004_AISI_304_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.004_AISI 304_2мм</h4>
+            <span class="cat-pill">2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.004_AISI_304_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.004_MIR_AISI_304_2мм" onclick="selectPart('VGO.002.004_MIR_AISI_304_2мм')" id="card-VGO.002.004_MIR_AISI_304_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.004_MIR_AISI 304_2мм</h4>
+            <span class="cat-pill">2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.004_MIR_AISI_304_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.005_AISI_304_2мм" onclick="selectPart('VGO.002.005_AISI_304_2мм')" id="card-VGO.002.005_AISI_304_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.005_AISI 304_2мм</h4>
+            <span class="cat-pill">2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.005_AISI_304_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.006_MIR_Чёрная_сталь_2мм" onclick="selectPart('VGO.002.006_MIR_Чёрная_сталь_2мм')" id="card-VGO.002.006_MIR_Чёрная_сталь_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.006_MIR_Чёрная сталь_2мм</h4>
+            <span class="cat-pill">2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.006_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.006_Чёрная_сталь_2мм" onclick="selectPart('VGO.002.006_Чёрная_сталь_2мм')" id="card-VGO.002.006_Чёрная_сталь_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.006_Чёрная сталь_2мм</h4>
+            <span class="cat-pill">2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.006_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.007_MIR_Чёрная_сталь_2мм" onclick="selectPart('VGO.002.007_MIR_Чёрная_сталь_2мм')" id="card-VGO.002.007_MIR_Чёрная_сталь_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.007_MIR_Чёрная сталь_2мм</h4>
+            <span class="cat-pill">2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.007_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.007_Чёрная_сталь_2мм" onclick="selectPart('VGO.002.007_Чёрная_сталь_2мм')" id="card-VGO.002.007_Чёрная_сталь_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.007_Чёрная сталь_2мм</h4>
+            <span class="cat-pill">2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.007_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.008_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.008_Чёрная_сталь_0_9мм')" id="card-VGO.002.008_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.008_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.008_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.009_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.009_Чёрная_сталь_0_9мм')" id="card-VGO.002.009_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.009_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.009_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.012_AISI_430_0_6мм" onclick="selectPart('VGO.002.012_AISI_430_0_6мм')" id="card-VGO.002.012_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.012_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.012_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.013_AISI_430_0_6мм" onclick="selectPart('VGO.002.013_AISI_430_0_6мм')" id="card-VGO.002.013_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.013_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.013_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.014_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.014_Чёрная_сталь_0_9мм')" id="card-VGO.002.014_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.014_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.014_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.015_CPY_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.015_CPY_Чёрная_сталь_0_9мм')" id="card-VGO.002.015_CPY_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.015_CPY_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.015_CPY_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.015_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.015_Чёрная_сталь_0_9мм')" id="card-VGO.002.015_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.015_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.015_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.016_Оцинк_1_2мм" onclick="selectPart('VGO.002.016_Оцинк_1_2мм')" id="card-VGO.002.016_Оцинк_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.016_Оцинк_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.016_%D0%9E%D1%86%D0%B8%D0%BD%D0%BA_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.017_Чёрная_сталь_2мм" onclick="selectPart('VGO.002.017_Чёрная_сталь_2мм')" id="card-VGO.002.017_Чёрная_сталь_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.017_Чёрная сталь_2мм</h4>
+            <span class="cat-pill">2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.017_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.018_MIR_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.018_MIR_Чёрная_сталь_0_9мм')" id="card-VGO.002.018_MIR_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.018_MIR_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.018_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.018_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.018_Чёрная_сталь_0_9мм')" id="card-VGO.002.018_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.018_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.018_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.019_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.019_Чёрная_сталь_0_9мм')" id="card-VGO.002.019_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.019_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.019_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.020_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.020_Чёрная_сталь_0_9мм')" id="card-VGO.002.020_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.020_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.020_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.021_MIR_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.021_MIR_Чёрная_сталь_0_9мм')" id="card-VGO.002.021_MIR_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.021_MIR_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.021_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.021_Чёрная_сталь_0_9мм" onclick="selectPart('VGO.002.021_Чёрная_сталь_0_9мм')" id="card-VGO.002.021_Чёрная_сталь_0_9мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.021_Чёрная сталь_0,9мм</h4>
+            <span class="cat-pill">0,9мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.021_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.022_Чёрная_сталь_2мм" onclick="selectPart('VGO.002.022_Чёрная_сталь_2мм')" id="card-VGO.002.022_Чёрная_сталь_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.022_Чёрная сталь_2мм</h4>
+            <span class="cat-pill">2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.022_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-002 (Каркас и стенки)" data-id="VGO.002.023_AISI_430_0_8мм" onclick="selectPart('VGO.002.023_AISI_430_0_8мм')" id="card-VGO.002.023_AISI_430_0_8мм">
+          <div class="part-item-header">
+            <h4>.VGO.002.023_AISI 430_0,8мм</h4>
+            <span class="cat-pill">0,8мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-002 (Каркас и стенки)</span>
+            <a href="VGO.002.023_AISI_430_0_8%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.001_AISI_430_0_6мм" onclick="selectPart('VGO.003.001_AISI_430_0_6мм')" id="card-VGO.003.001_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.001_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.001_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.002_CPY_CPY_AISI_430_0_8мм" onclick="selectPart('VGO.003.002_CPY_CPY_AISI_430_0_8мм')" id="card-VGO.003.002_CPY_CPY_AISI_430_0_8мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.002_CPY_CPY_AISI 430_0,8мм</h4>
+            <span class="cat-pill">0,8мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.002_CPY_CPY_AISI_430_0_8%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.003_AISI_430_0_6мм" onclick="selectPart('VGO.003.003_AISI_430_0_6мм')" id="card-VGO.003.003_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.003_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.003_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.004_Крашенная_0_5мм" onclick="selectPart('VGO.003.004_Крашенная_0_5мм')" id="card-VGO.003.004_Крашенная_0_5мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.004_Крашенная_0,5мм</h4>
+            <span class="cat-pill">0,5мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.004_%D0%9A%D1%80%D0%B0%D1%88%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F_0_5%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.005_Оцинк_1_2мм" onclick="selectPart('VGO.003.005_Оцинк_1_2мм')" id="card-VGO.003.005_Оцинк_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.005_Оцинк_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.005_%D0%9E%D1%86%D0%B8%D0%BD%D0%BA_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.006_MIR_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.003.006_MIR_Чёрная_сталь_1_2мм')" id="card-VGO.003.006_MIR_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.006_MIR_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.006_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.006_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.003.006_Чёрная_сталь_1_2мм')" id="card-VGO.003.006_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.006_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.006_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.007_MIR_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.003.007_MIR_Чёрная_сталь_1_2мм')" id="card-VGO.003.007_MIR_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.007_MIR_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.007_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.007_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.003.007_Чёрная_сталь_1_2мм')" id="card-VGO.003.007_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.007_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.007_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.008_MIR_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.003.008_MIR_Чёрная_сталь_1_2мм')" id="card-VGO.003.008_MIR_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.008_MIR_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.008_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.008_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.003.008_Чёрная_сталь_1_2мм')" id="card-VGO.003.008_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.008_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.008_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.010_MIR_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.003.010_MIR_Чёрная_сталь_1_2мм')" id="card-VGO.003.010_MIR_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.010_MIR_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.010_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.010_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.003.010_Чёрная_сталь_1_2мм')" id="card-VGO.003.010_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.010_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.010_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.011_AISI_430_0_6мм" onclick="selectPart('VGO.003.011_AISI_430_0_6мм')" id="card-VGO.003.011_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.011_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.011_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.012_AISI_430_0_6мм" onclick="selectPart('VGO.003.012_AISI_430_0_6мм')" id="card-VGO.003.012_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.012_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.012_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.012_MIR_AISI_430_0_6мм" onclick="selectPart('VGO.003.012_MIR_AISI_430_0_6мм')" id="card-VGO.003.012_MIR_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.012_MIR_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.012_MIR_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.013_AISI_430_0_6мм" onclick="selectPart('VGO.003.013_AISI_430_0_6мм')" id="card-VGO.003.013_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.013_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.013_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.013_MIR_AISI_430_0_6мм" onclick="selectPart('VGO.003.013_MIR_AISI_430_0_6мм')" id="card-VGO.003.013_MIR_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.013_MIR_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.013_MIR_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.014_AISI_430_0_8мм" onclick="selectPart('VGO.003.014_AISI_430_0_8мм')" id="card-VGO.003.014_AISI_430_0_8мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.014_AISI 430_0,8мм</h4>
+            <span class="cat-pill">0,8мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.014_AISI_430_0_8%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.015_AISI_430_0_8мм" onclick="selectPart('VGO.003.015_AISI_430_0_8мм')" id="card-VGO.003.015_AISI_430_0_8мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.015_AISI 430_0,8мм</h4>
+            <span class="cat-pill">0,8мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.015_AISI_430_0_8%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.016_AISI_430_0_6мм" onclick="selectPart('VGO.003.016_AISI_430_0_6мм')" id="card-VGO.003.016_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.016_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.016_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.017_Крашенная_0_5мм" onclick="selectPart('VGO.003.017_Крашенная_0_5мм')" id="card-VGO.003.017_Крашенная_0_5мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.017_Крашенная_0,5мм</h4>
+            <span class="cat-pill">0,5мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.017_%D0%9A%D1%80%D0%B0%D1%88%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F_0_5%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-003 (Полки и направляющие)" data-id="VGO.003.018_AISI_430_0_6мм" onclick="selectPart('VGO.003.018_AISI_430_0_6мм')" id="card-VGO.003.018_AISI_430_0_6мм">
+          <div class="part-item-header">
+            <h4>.VGO.003.018_AISI 430_0,6мм</h4>
+            <span class="cat-pill">0,6мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-003 (Полки и направляющие)</span>
+            <a href="VGO.003.018_AISI_430_0_6%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-004 (Кронштейны и опоры)" data-id="VGO.004.001_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.004.001_Чёрная_сталь_1_2мм')" id="card-VGO.004.001_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.004.001_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-004 (Кронштейны и опоры)</span>
+            <a href="VGO.004.001_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-004 (Кронштейны и опоры)" data-id="VGO.004.002_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.004.002_Чёрная_сталь_1_2мм')" id="card-VGO.004.002_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.004.002_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-004 (Кронштейны и опоры)</span>
+            <a href="VGO.004.002_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-004 (Кронштейны и опоры)" data-id="VGO.004.003_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.004.003_Чёрная_сталь_1_2мм')" id="card-VGO.004.003_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.004.003_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-004 (Кронштейны и опоры)</span>
+            <a href="VGO.004.003_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Узел VGO-004 (Кронштейны и опоры)" data-id="VGO.004.004_Чёрная_сталь_1_2мм" onclick="selectPart('VGO.004.004_Чёрная_сталь_1_2мм')" id="card-VGO.004.004_Чёрная_сталь_1_2мм">
+          <div class="part-item-header">
+            <h4>.VGO.004.004_Чёрная сталь_1,2мм</h4>
+            <span class="cat-pill">1,2мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Узел VGO-004 (Кронштейны и опоры)</span>
+            <a href="VGO.004.004_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Остекление (Акрил)" data-id="Акрил_MIR1_Акрил_5мм" onclick="selectPart('Акрил_MIR1_Акрил_5мм')" id="card-Акрил_MIR1_Акрил_5мм">
+          <div class="part-item-header">
+            <h4>Акрил_MIR1_Акрил_5мм</h4>
+            <span class="cat-pill">5мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Остекление (Акрил)</span>
+            <a href="%D0%90%D0%BA%D1%80%D0%B8%D0%BB_MIR1_%D0%90%D0%BA%D1%80%D0%B8%D0%BB_5%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Остекление (Акрил)" data-id="Акрил_Акрил_5мм" onclick="selectPart('Акрил_Акрил_5мм')" id="card-Акрил_Акрил_5мм">
+          <div class="part-item-header">
+            <h4>Акрил_Акрил_5мм</h4>
+            <span class="cat-pill">5мм</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Остекление (Акрил)</span>
+            <a href="%D0%90%D0%BA%D1%80%D0%B8%D0%BB_%D0%90%D0%BA%D1%80%D0%B8%D0%BB_5%D0%BC%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        
+        <div class="part-item" data-category="Главная сборка" data-id="Витрина-горка_открытая_Сборка_Целиком" onclick="selectPart('Витрина-горка_открытая_Сборка_Целиком')" id="card-Витрина-горка_открытая_Сборка_Целиком">
+          <div class="part-item-header">
+            <h4>Витрина-горка открытая_Сборка_Целиком</h4>
+            <span class="cat-pill">Сборочный габарит</span>
+          </div>
+          <div class="part-item-body">
+            <span class="file-name">Главная сборка</span>
+            <a href="%D0%92%D0%B8%D1%82%D1%80%D0%B8%D0%BD%D0%B0-%D0%B3%D0%BE%D1%80%D0%BA%D0%B0_%D0%BE%D1%82%D0%BA%D1%80%D1%8B%D1%82%D0%B0%D1%8F_%D0%A1%D0%B1%D0%BE%D1%80%D0%BA%D0%B0_%D0%A6%D0%B5%D0%BB%D0%B8%D0%BA%D0%BE%D0%BC.html" class="open-link" onclick="event.stopPropagation()">Открыть &rarr;</a>
+          </div>
+        </div>
+        </div>
+      </div>
+      <div class="sidebar-block">
+        <h3>Техкарта и QR выбранной детали</h3>
+        <div class="spec-card">
+          <table class="spec-table">
+            <tr><td>Подсборка:</td><td id="specCategory">-</td></tr>
+            <tr><td>Материал:</td><td id="specMaterial">-</td></tr>
+            <tr><td>Толщина:</td><td id="specThickness">-</td></tr>
+            <tr><td>Покрытие:</td><td id="specCoating">-</td></tr>
+            <tr><td>Цвет:</td><td id="specColor">-</td></tr>
+          </table>
+          <div class="qr-box">
+            <img id="specQrImg" src="" alt="QR">
+            <div class="qr-box-content">
+              <h5 id="specQrTitle">QR-код детали</h5>
+              <a id="specQrLink" href="" download>Скачать PNG этикетку &darr;</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    <div>Репозиторий: <a href="https://github.com/temurgapparovpronto-dot/Vitrina_gorka_otkrytaya_GLB_Export" target="_blank">temurgapparovpronto-dot/Vitrina_gorka_otkrytaya_GLB_Export</a></div>
+    <div>Маркировка и 3D-контроль для цеха лазерной резки, гибки и сборки</div>
+  </footer>
+  <script>
+    const parts = [{"id": "VGO.001.001_AISI_430_0_6мм", "title": ".VGO.001.001_AISI 430_0,6мм", "glb": ".VGO.001.001_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.001.001_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.001.001_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-001 (Воздуховоды)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.001.002_AISI_430_0_6мм", "title": ".VGO.001.002_AISI 430_0,6мм", "glb": ".VGO.001.002_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.001.002_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.001.002_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-001 (Воздуховоды)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.001.003_AISI_430_0_6мм", "title": ".VGO.001.003_AISI 430_0,6мм", "glb": ".VGO.001.003_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.001.003_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.001.003_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-001 (Воздуховоды)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.001.004_AISI_430_0_6мм", "title": ".VGO.001.004_AISI 430_0,6мм", "glb": ".VGO.001.004_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.001.004_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.001.004_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-001 (Воздуховоды)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.001.005_AISI_430_0_6мм", "title": ".VGO.001.005_AISI 430_0,6мм", "glb": ".VGO.001.005_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.001.005_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.001.005_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-001 (Воздуховоды)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.001.006_AISI_430_0_6мм", "title": ".VGO.001.006_AISI 430_0,6мм", "glb": ".VGO.001.006_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.001.006_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.001.006_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-001 (Воздуховоды)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.002.001_AISI_430_0_8мм", "title": ".VGO.002.001_AISI 430_0,8мм", "glb": ".VGO.002.001_AISI%20430_0%2C8%D0%BC%D0%BC.glb", "qr": "VGO.002.001_AISI_430_0_8%D0%BC%D0%BC_qr.png", "html": "VGO.002.001_AISI_430_0_8%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,8мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.002.001_MIR1_AISI_430_0_8мм", "title": ".VGO.002.001_MIR1_AISI 430_0,8мм", "glb": ".VGO.002.001_MIR1_AISI%20430_0%2C8%D0%BC%D0%BC.glb", "qr": "VGO.002.001_MIR1_AISI_430_0_8%D0%BC%D0%BC_qr.png", "html": "VGO.002.001_MIR1_AISI_430_0_8%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,8мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.002.002_Чёрная_сталь_0_9мм", "title": ".VGO.002.002_Чёрная сталь_0,9мм", "glb": ".VGO.002.002_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.002_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.002_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.003_AISI_430_0_6мм", "title": ".VGO.002.003_AISI 430_0,6мм", "glb": ".VGO.002.003_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.002.003_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.002.003_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.002.004_AISI_304_2мм", "title": ".VGO.002.004_AISI 304_2мм", "glb": ".VGO.002.004_AISI%20304_2%D0%BC%D0%BC.glb", "qr": "VGO.002.004_AISI_304_2%D0%BC%D0%BC_qr.png", "html": "VGO.002.004_AISI_304_2%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Пищевая нержавеющая сталь AISI 304", "thickness": "2мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.002.004_MIR_AISI_304_2мм", "title": ".VGO.002.004_MIR_AISI 304_2мм", "glb": ".VGO.002.004_MIR_AISI%20304_2%D0%BC%D0%BC.glb", "qr": "VGO.002.004_MIR_AISI_304_2%D0%BC%D0%BC_qr.png", "html": "VGO.002.004_MIR_AISI_304_2%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Пищевая нержавеющая сталь AISI 304", "thickness": "2мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.002.005_AISI_304_2мм", "title": ".VGO.002.005_AISI 304_2мм", "glb": ".VGO.002.005_AISI%20304_2%D0%BC%D0%BC.glb", "qr": "VGO.002.005_AISI_304_2%D0%BC%D0%BC_qr.png", "html": "VGO.002.005_AISI_304_2%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Пищевая нержавеющая сталь AISI 304", "thickness": "2мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.002.006_MIR_Чёрная_сталь_2мм", "title": ".VGO.002.006_MIR_Чёрная сталь_2мм", "glb": ".VGO.002.006_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.glb", "qr": "VGO.002.006_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC_qr.png", "html": "VGO.002.006_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.006_Чёрная_сталь_2мм", "title": ".VGO.002.006_Чёрная сталь_2мм", "glb": ".VGO.002.006_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.glb", "qr": "VGO.002.006_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC_qr.png", "html": "VGO.002.006_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.007_MIR_Чёрная_сталь_2мм", "title": ".VGO.002.007_MIR_Чёрная сталь_2мм", "glb": ".VGO.002.007_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.glb", "qr": "VGO.002.007_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC_qr.png", "html": "VGO.002.007_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.007_Чёрная_сталь_2мм", "title": ".VGO.002.007_Чёрная сталь_2мм", "glb": ".VGO.002.007_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.glb", "qr": "VGO.002.007_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC_qr.png", "html": "VGO.002.007_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.008_Чёрная_сталь_0_9мм", "title": ".VGO.002.008_Чёрная сталь_0,9мм", "glb": ".VGO.002.008_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.008_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.008_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.009_Чёрная_сталь_0_9мм", "title": ".VGO.002.009_Чёрная сталь_0,9мм", "glb": ".VGO.002.009_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.009_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.009_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.012_AISI_430_0_6мм", "title": ".VGO.002.012_AISI 430_0,6мм", "glb": ".VGO.002.012_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.002.012_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.002.012_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.002.013_AISI_430_0_6мм", "title": ".VGO.002.013_AISI 430_0,6мм", "glb": ".VGO.002.013_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.002.013_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.002.013_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.002.014_Чёрная_сталь_0_9мм", "title": ".VGO.002.014_Чёрная сталь_0,9мм", "glb": ".VGO.002.014_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.014_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.014_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.015_CPY_Чёрная_сталь_0_9мм", "title": ".VGO.002.015_CPY_Чёрная сталь_0,9мм", "glb": ".VGO.002.015_CPY_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.015_CPY_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.015_CPY_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.015_Чёрная_сталь_0_9мм", "title": ".VGO.002.015_Чёрная сталь_0,9мм", "glb": ".VGO.002.015_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.015_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.015_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.016_Оцинк_1_2мм", "title": ".VGO.002.016_Оцинк_1,2мм", "glb": ".VGO.002.016_%D0%9E%D1%86%D0%B8%D0%BD%D0%BA_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.002.016_%D0%9E%D1%86%D0%B8%D0%BD%D0%BA_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.002.016_%D0%9E%D1%86%D0%B8%D0%BD%D0%BA_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Оцинкованная листовая сталь", "thickness": "1,2мм", "coating": "Цинковое антикоррозийное покрытие", "color": "Цинк (металлик)", "layer": "10 - 15 мкм"}, {"id": "VGO.002.017_Чёрная_сталь_2мм", "title": ".VGO.002.017_Чёрная сталь_2мм", "glb": ".VGO.002.017_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.glb", "qr": "VGO.002.017_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC_qr.png", "html": "VGO.002.017_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.018_MIR_Чёрная_сталь_0_9мм", "title": ".VGO.002.018_MIR_Чёрная сталь_0,9мм", "glb": ".VGO.002.018_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.018_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.018_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.018_Чёрная_сталь_0_9мм", "title": ".VGO.002.018_Чёрная сталь_0,9мм", "glb": ".VGO.002.018_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.018_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.018_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.019_Чёрная_сталь_0_9мм", "title": ".VGO.002.019_Чёрная сталь_0,9мм", "glb": ".VGO.002.019_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.019_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.019_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.020_Чёрная_сталь_0_9мм", "title": ".VGO.002.020_Чёрная сталь_0,9мм", "glb": ".VGO.002.020_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.020_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.020_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.021_MIR_Чёрная_сталь_0_9мм", "title": ".VGO.002.021_MIR_Чёрная сталь_0,9мм", "glb": ".VGO.002.021_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.021_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.021_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.021_Чёрная_сталь_0_9мм", "title": ".VGO.002.021_Чёрная сталь_0,9мм", "glb": ".VGO.002.021_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0%2C9%D0%BC%D0%BC.glb", "qr": "VGO.002.021_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC_qr.png", "html": "VGO.002.021_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_0_9%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "0,9мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.022_Чёрная_сталь_2мм", "title": ".VGO.002.022_Чёрная сталь_2мм", "glb": ".VGO.002.022_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.glb", "qr": "VGO.002.022_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC_qr.png", "html": "VGO.002.022_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_2%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.002.023_AISI_430_0_8мм", "title": ".VGO.002.023_AISI 430_0,8мм", "glb": ".VGO.002.023_AISI%20430_0%2C8%D0%BC%D0%BC.glb", "qr": "VGO.002.023_AISI_430_0_8%D0%BC%D0%BC_qr.png", "html": "VGO.002.023_AISI_430_0_8%D0%BC%D0%BC.html", "category": "Узел VGO-002 (Каркас и стенки)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,8мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.001_AISI_430_0_6мм", "title": ".VGO.003.001_AISI 430_0,6мм", "glb": ".VGO.003.001_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.003.001_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.003.001_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.002_CPY_CPY_AISI_430_0_8мм", "title": ".VGO.003.002_CPY_CPY_AISI 430_0,8мм", "glb": ".VGO.003.002_CPY_CPY_AISI%20430_0%2C8%D0%BC%D0%BC.glb", "qr": "VGO.003.002_CPY_CPY_AISI_430_0_8%D0%BC%D0%BC_qr.png", "html": "VGO.003.002_CPY_CPY_AISI_430_0_8%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,8мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.003_AISI_430_0_6мм", "title": ".VGO.003.003_AISI 430_0,6мм", "glb": ".VGO.003.003_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.003.003_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.003.003_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.004_Крашенная_0_5мм", "title": ".VGO.003.004_Крашенная_0,5мм", "glb": ".VGO.003.004_%D0%9A%D1%80%D0%B0%D1%88%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F_0%2C5%D0%BC%D0%BC.glb", "qr": "VGO.003.004_%D0%9A%D1%80%D0%B0%D1%88%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F_0_5%D0%BC%D0%BC_qr.png", "html": "VGO.003.004_%D0%9A%D1%80%D0%B0%D1%88%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F_0_5%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Окрашенный полимерный лист", "thickness": "0,5мм", "coating": "Заводское полимерное покрытие", "color": "По спецификации", "layer": "25 - 35 мкм"}, {"id": "VGO.003.005_Оцинк_1_2мм", "title": ".VGO.003.005_Оцинк_1,2мм", "glb": ".VGO.003.005_%D0%9E%D1%86%D0%B8%D0%BD%D0%BA_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.003.005_%D0%9E%D1%86%D0%B8%D0%BD%D0%BA_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.003.005_%D0%9E%D1%86%D0%B8%D0%BD%D0%BA_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Оцинкованная листовая сталь", "thickness": "1,2мм", "coating": "Цинковое антикоррозийное покрытие", "color": "Цинк (металлик)", "layer": "10 - 15 мкм"}, {"id": "VGO.003.006_MIR_Чёрная_сталь_1_2мм", "title": ".VGO.003.006_MIR_Чёрная сталь_1,2мм", "glb": ".VGO.003.006_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.003.006_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.003.006_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.003.006_Чёрная_сталь_1_2мм", "title": ".VGO.003.006_Чёрная сталь_1,2мм", "glb": ".VGO.003.006_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.003.006_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.003.006_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.003.007_MIR_Чёрная_сталь_1_2мм", "title": ".VGO.003.007_MIR_Чёрная сталь_1,2мм", "glb": ".VGO.003.007_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.003.007_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.003.007_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.003.007_Чёрная_сталь_1_2мм", "title": ".VGO.003.007_Чёрная сталь_1,2мм", "glb": ".VGO.003.007_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.003.007_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.003.007_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.003.008_MIR_Чёрная_сталь_1_2мм", "title": ".VGO.003.008_MIR_Чёрная сталь_1,2мм", "glb": ".VGO.003.008_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.003.008_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.003.008_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.003.008_Чёрная_сталь_1_2мм", "title": ".VGO.003.008_Чёрная сталь_1,2мм", "glb": ".VGO.003.008_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.003.008_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.003.008_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.003.010_MIR_Чёрная_сталь_1_2мм", "title": ".VGO.003.010_MIR_Чёрная сталь_1,2мм", "glb": ".VGO.003.010_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.003.010_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.003.010_MIR_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.003.010_Чёрная_сталь_1_2мм", "title": ".VGO.003.010_Чёрная сталь_1,2мм", "glb": ".VGO.003.010_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.003.010_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.003.010_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.003.011_AISI_430_0_6мм", "title": ".VGO.003.011_AISI 430_0,6мм", "glb": ".VGO.003.011_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.003.011_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.003.011_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.012_AISI_430_0_6мм", "title": ".VGO.003.012_AISI 430_0,6мм", "glb": ".VGO.003.012_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.003.012_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.003.012_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.012_MIR_AISI_430_0_6мм", "title": ".VGO.003.012_MIR_AISI 430_0,6мм", "glb": ".VGO.003.012_MIR_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.003.012_MIR_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.003.012_MIR_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.013_AISI_430_0_6мм", "title": ".VGO.003.013_AISI 430_0,6мм", "glb": ".VGO.003.013_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.003.013_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.003.013_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.013_MIR_AISI_430_0_6мм", "title": ".VGO.003.013_MIR_AISI 430_0,6мм", "glb": ".VGO.003.013_MIR_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.003.013_MIR_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.003.013_MIR_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.014_AISI_430_0_8мм", "title": ".VGO.003.014_AISI 430_0,8мм", "glb": ".VGO.003.014_AISI%20430_0%2C8%D0%BC%D0%BC.glb", "qr": "VGO.003.014_AISI_430_0_8%D0%BC%D0%BC_qr.png", "html": "VGO.003.014_AISI_430_0_8%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,8мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.015_AISI_430_0_8мм", "title": ".VGO.003.015_AISI 430_0,8мм", "glb": ".VGO.003.015_AISI%20430_0%2C8%D0%BC%D0%BC.glb", "qr": "VGO.003.015_AISI_430_0_8%D0%BC%D0%BC_qr.png", "html": "VGO.003.015_AISI_430_0_8%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,8мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.016_AISI_430_0_6мм", "title": ".VGO.003.016_AISI 430_0,6мм", "glb": ".VGO.003.016_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.003.016_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.003.016_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.003.017_Крашенная_0_5мм", "title": ".VGO.003.017_Крашенная_0,5мм", "glb": ".VGO.003.017_%D0%9A%D1%80%D0%B0%D1%88%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F_0%2C5%D0%BC%D0%BC.glb", "qr": "VGO.003.017_%D0%9A%D1%80%D0%B0%D1%88%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F_0_5%D0%BC%D0%BC_qr.png", "html": "VGO.003.017_%D0%9A%D1%80%D0%B0%D1%88%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F_0_5%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Окрашенный полимерный лист", "thickness": "0,5мм", "coating": "Заводское полимерное покрытие", "color": "По спецификации", "layer": "25 - 35 мкм"}, {"id": "VGO.003.018_AISI_430_0_6мм", "title": ".VGO.003.018_AISI 430_0,6мм", "glb": ".VGO.003.018_AISI%20430_0%2C6%D0%BC%D0%BC.glb", "qr": "VGO.003.018_AISI_430_0_6%D0%BC%D0%BC_qr.png", "html": "VGO.003.018_AISI_430_0_6%D0%BC%D0%BC.html", "category": "Узел VGO-003 (Полки и направляющие)", "material": "Нержавеющая сталь AISI 430", "thickness": "0,6мм", "coating": "Защитная пленка, шлифованная поверхность", "color": "Натуральный металлический (шлифовка)", "layer": "Без окраски"}, {"id": "VGO.004.001_Чёрная_сталь_1_2мм", "title": ".VGO.004.001_Чёрная сталь_1,2мм", "glb": ".VGO.004.001_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.004.001_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.004.001_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-004 (Кронштейны и опоры)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.004.002_Чёрная_сталь_1_2мм", "title": ".VGO.004.002_Чёрная сталь_1,2мм", "glb": ".VGO.004.002_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.004.002_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.004.002_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-004 (Кронштейны и опоры)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.004.003_Чёрная_сталь_1_2мм", "title": ".VGO.004.003_Чёрная сталь_1,2мм", "glb": ".VGO.004.003_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.004.003_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.004.003_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-004 (Кронштейны и опоры)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "VGO.004.004_Чёрная_сталь_1_2мм", "title": ".VGO.004.004_Чёрная сталь_1,2мм", "glb": ".VGO.004.004_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F%20%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1%2C2%D0%BC%D0%BC.glb", "qr": "VGO.004.004_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC_qr.png", "html": "VGO.004.004_%D0%A7%D1%91%D1%80%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BB%D1%8C_1_2%D0%BC%D0%BC.html", "category": "Узел VGO-004 (Кронштейны и опоры)", "material": "Конструкционная холоднокатаная сталь 08пс", "thickness": "1,2мм", "coating": "Порошково-полимерная окраска", "color": "RAL 9005 (Чёрный муар) / RAL 7016", "layer": "80 - 120 мкм"}, {"id": "Акрил_MIR1_Акрил_5мм", "title": "Акрил_MIR1_Акрил_5мм", "glb": "%D0%90%D0%BA%D1%80%D0%B8%D0%BB_MIR1_%D0%90%D0%BA%D1%80%D0%B8%D0%BB_5%D0%BC%D0%BC.glb", "qr": "%D0%90%D0%BA%D1%80%D0%B8%D0%BB_MIR1_%D0%90%D0%BA%D1%80%D0%B8%D0%BB_5%D0%BC%D0%BC_qr.png", "html": "%D0%90%D0%BA%D1%80%D0%B8%D0%BB_MIR1_%D0%90%D0%BA%D1%80%D0%B8%D0%BB_5%D0%BC%D0%BC.html", "category": "Остекление (Акрил)", "material": "Прозрачный литьевой акрил Plexiglas", "thickness": "5мм", "coating": "Полировка еврокромки", "color": "100% прозрачный", "layer": "Защитная пленка с 2-х сторон"}, {"id": "Акрил_Акрил_5мм", "title": "Акрил_Акрил_5мм", "glb": "%D0%90%D0%BA%D1%80%D0%B8%D0%BB_%D0%90%D0%BA%D1%80%D0%B8%D0%BB_5%D0%BC%D0%BC.glb", "qr": "%D0%90%D0%BA%D1%80%D0%B8%D0%BB_%D0%90%D0%BA%D1%80%D0%B8%D0%BB_5%D0%BC%D0%BC_qr.png", "html": "%D0%90%D0%BA%D1%80%D0%B8%D0%BB_%D0%90%D0%BA%D1%80%D0%B8%D0%BB_5%D0%BC%D0%BC.html", "category": "Остекление (Акрил)", "material": "Прозрачный литьевой акрил Plexiglas", "thickness": "5мм", "coating": "Полировка еврокромки", "color": "100% прозрачный", "layer": "Защитная пленка с 2-х сторон"}, {"id": "Витрина-горка_открытая_Сборка_Целиком", "title": "Витрина-горка открытая_Сборка_Целиком", "glb": "%D0%92%D0%B8%D1%82%D1%80%D0%B8%D0%BD%D0%B0-%D0%B3%D0%BE%D1%80%D0%BA%D0%B0%20%D0%BE%D1%82%D0%BA%D1%80%D1%8B%D1%82%D0%B0%D1%8F_%D0%A1%D0%B1%D0%BE%D1%80%D0%BA%D0%B0_%D0%A6%D0%B5%D0%BB%D0%B8%D0%BA%D0%BE%D0%BC.glb", "qr": "%D0%92%D0%B8%D1%82%D1%80%D0%B8%D0%BD%D0%B0-%D0%B3%D0%BE%D1%80%D0%BA%D0%B0_%D0%BE%D1%82%D0%BA%D1%80%D1%8B%D1%82%D0%B0%D1%8F_%D0%A1%D0%B1%D0%BE%D1%80%D0%BA%D0%B0_%D0%A6%D0%B5%D0%BB%D0%B8%D0%BA%D0%BE%D0%BC_qr.png", "html": "%D0%92%D0%B8%D1%82%D1%80%D0%B8%D0%BD%D0%B0-%D0%B3%D0%BE%D1%80%D0%BA%D0%B0_%D0%BE%D1%82%D0%BA%D1%80%D1%8B%D1%82%D0%B0%D1%8F_%D0%A1%D0%B1%D0%BE%D1%80%D0%BA%D0%B0_%D0%A6%D0%B5%D0%BB%D0%B8%D0%BA%D0%BE%D0%BC.html", "category": "Главная сборка", "material": "Нержавеющая сталь + Конструкционная сталь + Акрил", "thickness": "Сборочный габарит", "coating": "Комбинированное", "color": "RAL 9005 / Inox", "layer": "По ТУ изделия"}];
+    const viewer = document.getElementById('mainViewer');
+    let currentCategory = 'all';
+
+    function selectPart(id) {
+      const p = parts.find(item => item.id === id);
+      if (!p) return;
+      viewer.src = p.glb;
+      document.getElementById('activeTitle').textContent = p.title;
+      document.getElementById('dedicatedLink').href = p.html;
+      document.getElementById('specCategory').textContent = p.category;
+      document.getElementById('specMaterial').textContent = p.material;
+      document.getElementById('specThickness').textContent = p.thickness;
+      document.getElementById('specCoating').textContent = p.coating;
+      document.getElementById('specColor').textContent = p.color;
+      document.getElementById('specQrImg').src = p.qr;
+      document.getElementById('specQrTitle').textContent = 'QR: ' + p.title;
+      document.getElementById('specQrLink').href = p.qr;
+      document.querySelectorAll('.part-item').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById('card-' + id);
+      if (activeEl) activeEl.classList.add('active');
+    }
+
+    function filterCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if ((cat === 'all' && btn.textContent.startsWith('Все')) || btn.textContent.startsWith(cat)) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      applyFilters();
+    }
+
+    function handleSearch() { applyFilters(); }
+
+    function applyFilters() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      document.querySelectorAll('.part-item').forEach(item => {
+        const cat = item.getAttribute('data-category');
+        const text = item.textContent.toLowerCase();
+        const matchCat = (currentCategory === 'all' || cat === currentCategory);
+        const matchQuery = !q || text.includes(q);
+        item.style.display = (matchCat && matchQuery) ? 'block' : 'none';
+      });
+    }
+
+    const initialPart = parts.find(p => p.id.includes('Сборка_Целиком')) || parts[0];
+    if (initialPart) selectPart(initialPart.id);
+  </script>
+</body>
+</html>
